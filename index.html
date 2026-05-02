@@ -1,1 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Flying Block Game</title>
+  <style>
+    body {
+      margin: 0;
+      text-align: center;
+      background: #111;
+      color: white;
+      font-family: Arial;
+    }
+    canvas {
+      background: linear-gradient(skyblue, white);
+      display: block;
+      margin: auto;
+      border: 3px solid white;
+    }
+    h1 {
+      margin: 10px;
+    }
+  </style>
+</head>
+<body>
 
+<h1>🚀 Flying Block Game</h1>
+<p>Press SPACE to jump</p>
+<canvas id="game" width="400" height="600"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let bird = { x: 80, y: 200, gravity: 0.6, velocity: 0 };
+let pipes = [];
+let score = 0;
+let gameOver = false;
+
+// jump control
+document.addEventListener("keydown", function(e){
+  if(e.code === "Space"){
+    bird.velocity = -10;
+  }
+});
+
+// pipe creator
+function createPipe(){
+  let gap = 120;
+  let topHeight = Math.random() * 300 + 50;
+
+  pipes.push({
+    x: 400,
+    top: topHeight,
+    bottom: topHeight + gap
+  });
+}
+
+// game loop
+function update(){
+  if(gameOver) return;
+
+  bird.velocity += bird.gravity;
+  bird.y += bird.velocity;
+
+  if(bird.y > 580 || bird.y < 0){
+    gameOver = true;
+  }
+
+  for(let i=0; i<pipes.length; i++){
+    pipes[i].x -= 3;
+
+    if(
+      bird.x < pipes[i].x + 50 &&
+      bird.x + 30 > pipes[i].x &&
+      (bird.y < pipes[i].top || bird.y > pipes[i].bottom)
+    ){
+      gameOver = true;
+    }
+
+    if(pipes[i].x === 50){
+      score++;
+    }
+  }
+
+  pipes = pipes.filter(p => p.x > -50);
+}
+
+// draw
+function draw(){
+  ctx.clearRect(0,0,400,600);
+
+  ctx.fillStyle = "red";
+  ctx.fillRect(bird.x, bird.y, 30, 30);
+
+  ctx.fillStyle = "green";
+  for(let p of pipes){
+    ctx.fillRect(p.x, 0, 50, p.top);
+    ctx.fillRect(p.x, p.bottom, 50, 600);
+  }
+
+  ctx.fillStyle = "black";
+  ctx.font = "20px Arial";
+  ctx.fillText("Score: " + score, 10, 30);
+
+  if(gameOver){
+    ctx.fillStyle = "black";
+    ctx.font = "30px Arial";
+    ctx.fillText("GAME OVER", 120, 300);
+  }
+}
+
+// loop
+function loop(){
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+setInterval(createPipe, 2000);
+
+loop();
+</script>
+
+</body>
+</html>

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Flying Block Game</title>
+  <title>Flappy Bird Fixed</title>
   <style>
     body {
       margin: 0;
@@ -11,87 +11,100 @@
       font-family: Arial;
     }
     canvas {
-      background: linear-gradient(skyblue, white);
+      background: skyblue;
       display: block;
       margin: auto;
       border: 3px solid white;
-    }
-    h1 {
-      margin: 10px;
     }
   </style>
 </head>
 <body>
 
-<h1>🚀 Flying Block Game</h1>
-<p>Press SPACE to jump</p>
+<h2>🐦 Flappy Bird (Fixed)</h2>
+<p>Press SPACE to jump | R = restart</p>
+
 <canvas id="game" width="400" height="600"></canvas>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-let bird = { x: 80, y: 200, gravity: 0.6, velocity: 0 };
-let pipes = [];
-let score = 0;
-let gameOver = false;
+let bird, pipes, score, gameOver;
 
-// jump control
+function init(){
+  bird = { x: 80, y: 250, velocity: 0 };
+  pipes = [];
+  score = 0;
+  gameOver = false;
+}
+
+init();
+
 document.addEventListener("keydown", function(e){
   if(e.code === "Space"){
-    bird.velocity = -10;
+    if(!gameOver) bird.velocity = -8;
+  }
+  if(e.code === "KeyR"){
+    init();
   }
 });
 
-// pipe creator
 function createPipe(){
-  let gap = 120;
-  let topHeight = Math.random() * 300 + 50;
+  let gap = 140;
+  let top = Math.random() * 250 + 50;
 
   pipes.push({
     x: 400,
-    top: topHeight,
-    bottom: topHeight + gap
+    top: top,
+    bottom: top + gap,
+    passed: false
   });
 }
 
-// game loop
+setInterval(()=>{
+  if(!gameOver) createPipe();
+}, 1800);
+
 function update(){
   if(gameOver) return;
 
-  bird.velocity += bird.gravity;
+  bird.velocity += 0.5;
   bird.y += bird.velocity;
 
   if(bird.y > 580 || bird.y < 0){
     gameOver = true;
   }
 
-  for(let i=0; i<pipes.length; i++){
-    pipes[i].x -= 3;
+  for(let p of pipes){
+    p.x -= 3;
 
+    // collision safe check
     if(
-      bird.x < pipes[i].x + 50 &&
-      bird.x + 30 > pipes[i].x &&
-      (bird.y < pipes[i].top || bird.y > pipes[i].bottom)
+      bird.x < p.x + 50 &&
+      bird.x + 30 > p.x &&
+      (bird.y < p.top || bird.y > p.bottom)
     ){
       gameOver = true;
     }
 
-    if(pipes[i].x === 50){
+    // score fix
+    if(!p.passed && p.x + 50 < bird.x){
       score++;
+      p.passed = true;
     }
   }
 
-  pipes = pipes.filter(p => p.x > -50);
+  pipes = pipes.filter(p => p.x > -60);
 }
 
-// draw
 function draw(){
   ctx.clearRect(0,0,400,600);
 
-  ctx.fillStyle = "red";
-  ctx.fillRect(bird.x, bird.y, 30, 30);
+  // bird
+  ctx.fillStyle = "yellow";
+  ctx.fillRect(bird.x, bird.y, 25, 25);
 
+  // pipes
   ctx.fillStyle = "green";
   for(let p of pipes){
     ctx.fillRect(p.x, 0, 50, p.top);
@@ -103,20 +116,18 @@ function draw(){
   ctx.fillText("Score: " + score, 10, 30);
 
   if(gameOver){
-    ctx.fillStyle = "black";
     ctx.font = "30px Arial";
-    ctx.fillText("GAME OVER", 120, 300);
+    ctx.fillText("GAME OVER", 100, 300);
+    ctx.font = "16px Arial";
+    ctx.fillText("Press R to restart", 120, 340);
   }
 }
 
-// loop
 function loop(){
   update();
   draw();
   requestAnimationFrame(loop);
 }
-
-setInterval(createPipe, 2000);
 
 loop();
 </script>

@@ -2,18 +2,17 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Flappy Bird</title>
+<title>Flappy Pro</title>
+
 <style>
-    body {
-        margin: 0;
-        overflow: hidden;
-        background: skyblue;
-    }
-    canvas {
-        display: block;
-        margin: auto;
-        background: linear-gradient(skyblue, lightblue);
-    }
+body {
+    margin: 0;
+    overflow: hidden;
+    background: #70c5ce;
+}
+canvas {
+    display: block;
+}
 </style>
 </head>
 <body>
@@ -24,19 +23,19 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-// Responsive canvas
+// Responsive
 function resize() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 }
-window.addEventListener("resize", resize);
 resize();
+window.addEventListener("resize", resize);
 
 // Bird
 let bird = {
     x: 80,
-    y: canvas.height / 2,
-    size: 20,
+    y: 200,
+    r: 15,
     gravity: 0.5,
     lift: -8,
     velocity: 0
@@ -44,10 +43,24 @@ let bird = {
 
 // Pipes
 let pipes = [];
-let pipeWidth = 60;
-let gap = 150;
+let gap = 160;
+let pipeWidth = 70;
 
-// Create pipes
+// Controls
+function jump() {
+    bird.velocity = bird.lift;
+}
+
+// PC
+document.addEventListener("keydown", e => {
+    if (e.code === "Space") jump();
+});
+
+// Mobile
+document.addEventListener("touchstart", jump);
+document.addEventListener("click", jump);
+
+// Create pipe
 function createPipe() {
     let top = Math.random() * (canvas.height / 2);
     pipes.push({
@@ -57,66 +70,109 @@ function createPipe() {
     });
 }
 
-// Controls
-function jump() {
-    bird.velocity = bird.lift;
+// Draw bird (GOOD GRAPHICS)
+function drawBird() {
+    ctx.save();
+    ctx.translate(bird.x, bird.y);
+    ctx.rotate(bird.velocity * 0.05);
+
+    // body
+    ctx.fillStyle = "yellow";
+    ctx.beginPath();
+    ctx.arc(0, 0, bird.r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // eye
+    ctx.fillStyle = "white";
+    ctx.beginPath();
+    ctx.arc(5, -5, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "black";
+    ctx.beginPath();
+    ctx.arc(7, -5, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // beak
+    ctx.fillStyle = "orange";
+    ctx.beginPath();
+    ctx.moveTo(10, 0);
+    ctx.lineTo(20, 5);
+    ctx.lineTo(10, 8);
+    ctx.fill();
+
+    ctx.restore();
 }
 
-// PC controls
-document.addEventListener("keydown", (e) => {
-    if (e.code === "Space") jump();
-});
+// Draw pipes (NOT WALLS 😄)
+function drawPipe(p) {
+    // gradient pipe
+    let grad = ctx.createLinearGradient(p.x, 0, p.x + pipeWidth, 0);
+    grad.addColorStop(0, "#2ecc71");
+    grad.addColorStop(1, "#27ae60");
 
-// Mobile controls
-document.addEventListener("touchstart", jump);
-document.addEventListener("click", jump);
+    ctx.fillStyle = grad;
+
+    // top pipe
+    ctx.fillRect(p.x, 0, pipeWidth, p.top);
+
+    // bottom pipe
+    ctx.fillRect(p.x, p.bottom, pipeWidth, canvas.height);
+
+    // pipe cap
+    ctx.fillStyle = "#1e8449";
+    ctx.fillRect(p.x - 5, p.top - 20, pipeWidth + 10, 20);
+    ctx.fillRect(p.x - 5, p.bottom, pipeWidth + 10, 20);
+}
 
 // Game loop
 function update() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Bird physics
+    // sky gradient
+    let sky = ctx.createLinearGradient(0,0,0,canvas.height);
+    sky.addColorStop(0,"#70c5ce");
+    sky.addColorStop(1,"#c0f0ff");
+    ctx.fillStyle = sky;
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // physics
     bird.velocity += bird.gravity;
     bird.y += bird.velocity;
 
-    // Draw bird (circle instead of block)
-    ctx.beginPath();
-    ctx.arc(bird.x, bird.y, bird.size, 0, Math.PI * 2);
-    ctx.fillStyle = "yellow";
-    ctx.fill();
-    ctx.closePath();
+    drawBird();
 
-    // Pipes
+    // pipes
     for (let i = 0; i < pipes.length; i++) {
         let p = pipes[i];
-
         p.x -= 3;
 
-        // Draw pipes (proper pipe look)
-        ctx.fillStyle = "green";
-        ctx.fillRect(p.x, 0, pipeWidth, p.top);
-        ctx.fillRect(p.x, p.bottom, pipeWidth, canvas.height);
+        drawPipe(p);
 
-        // Collision
+        // collision
         if (
-            bird.x + bird.size > p.x &&
-            bird.x - bird.size < p.x + pipeWidth &&
-            (bird.y - bird.size < p.top || bird.y + bird.size > p.bottom)
+            bird.x + bird.r > p.x &&
+            bird.x - bird.r < p.x + pipeWidth &&
+            (bird.y - bird.r < p.top || bird.y + bird.r > p.bottom)
         ) {
             location.reload();
         }
     }
 
-    // Remove old pipes
-    pipes = pipes.filter(p => p.x + pipeWidth > 0);
+    // remove old
+    pipes = pipes.filter(p => p.x > -pipeWidth);
 
-    // Generate pipes
+    // create new
     if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 250) {
         createPipe();
     }
 
-    // Ground & top collision
-    if (bird.y > canvas.height || bird.y < 0) {
+    // ground
+    ctx.fillStyle = "#d35400";
+    ctx.fillRect(0, canvas.height - 60, canvas.width, 60);
+
+    // collision ground
+    if (bird.y + bird.r > canvas.height - 60 || bird.y < 0) {
         location.reload();
     }
 

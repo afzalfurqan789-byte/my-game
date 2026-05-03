@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Flappy UI</title>
+<title>Flappy One Button</title>
 
 <style>
 body { margin:0; overflow:hidden; }
@@ -16,12 +16,11 @@ canvas { display:block; }
 }
 
 button {
-    font-size: 18px;
-    padding: 8px 12px;
-    margin-left: 5px;
+    font-size: 20px;
+    padding: 10px 14px;
     border: none;
-    border-radius: 8px;
-    background: rgba(0,0,0,0.5);
+    border-radius: 10px;
+    background: rgba(0,0,0,0.6);
     color: white;
 }
 </style>
@@ -29,8 +28,7 @@ button {
 <body>
 
 <div id="ui">
-    <button onclick="togglePause()">⏸</button>
-    <button onclick="restart()">🔁</button>
+    <button id="mainBtn">↻</button>
 </div>
 
 <canvas id="game"></canvas>
@@ -66,13 +64,23 @@ let pipes = [];
 let gap = 160;
 let pipeWidth = 70;
 
-// CONTROLS
+// JUMP
 function jump() {
     if (!gameOver && !paused) {
         bird.velocity = bird.lift;
     }
 }
 
+// ONE BUTTON LOGIC
+function mainButtonAction() {
+    if (gameOver) {
+        restart();
+    } else {
+        paused = !paused;
+    }
+}
+
+// RESTART
 function restart() {
     bird.y = 200;
     bird.velocity = 0;
@@ -82,18 +90,20 @@ function restart() {
     paused = false;
 }
 
-function togglePause() {
-    if (!gameOver) paused = !paused;
-}
+// BUTTON CLICK (IMPORTANT)
+document.getElementById("mainBtn").addEventListener("click", (e) => {
+    e.stopPropagation();
+    mainButtonAction();
+});
 
 // PC
 document.addEventListener("keydown", e => {
     if (e.code === "Space") jump();
 });
 
-// Mobile tap
-document.addEventListener("touchstart", jump);
-document.addEventListener("click", jump);
+// MOBILE + CLICK (ONLY CANVAS → no button conflict)
+canvas.addEventListener("click", jump);
+canvas.addEventListener("touchstart", jump);
 
 // CREATE PIPE
 function createPipe() {
@@ -152,7 +162,7 @@ function drawPipe(p) {
     ctx.fillRect(p.x-5,p.bottom,pipeWidth+10,20);
 }
 
-// DRAW UI TEXT
+// DRAW UI
 function drawUI() {
     ctx.fillStyle = "white";
     ctx.font = "bold 30px Arial";
@@ -161,12 +171,9 @@ function drawUI() {
     if (gameOver) {
         ctx.font = "bold 50px Arial";
         ctx.fillText("GAME OVER", canvas.width/2 - 150, canvas.height/2);
-
-        ctx.font = "25px Arial";
-        ctx.fillText("Use Restart Button ↗", canvas.width/2 - 120, canvas.height/2 + 50);
     }
 
-    if (paused) {
+    if (paused && !gameOver) {
         ctx.font = "bold 50px Arial";
         ctx.fillText("PAUSED", canvas.width/2 - 100, canvas.height/2);
     }
@@ -176,7 +183,6 @@ function drawUI() {
 function update() {
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    // sky
     let sky = ctx.createLinearGradient(0,0,0,canvas.height);
     sky.addColorStop(0,"#70c5ce");
     sky.addColorStop(1,"#c0f0ff");

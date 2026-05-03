@@ -2,17 +2,11 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Flappy Pro</title>
+<title>Flappy Ultimate</title>
 
 <style>
-body {
-    margin: 0;
-    overflow: hidden;
-    background: #70c5ce;
-}
-canvas {
-    display: block;
-}
+body { margin:0; overflow:hidden; background:#70c5ce; }
+canvas { display:block; }
 </style>
 </head>
 <body>
@@ -23,7 +17,6 @@ canvas {
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-// Responsive
 function resize() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -31,7 +24,11 @@ function resize() {
 resize();
 window.addEventListener("resize", resize);
 
-// Bird
+// GAME STATE
+let gameOver = false;
+let score = 0;
+
+// BIRD
 let bird = {
     x: 80,
     y: 200,
@@ -41,113 +38,163 @@ let bird = {
     velocity: 0
 };
 
-// Pipes
+// PIPES
 let pipes = [];
 let gap = 160;
 let pipeWidth = 70;
 
-// Controls
+// CONTROLS
 function jump() {
-    bird.velocity = bird.lift;
+    if (!gameOver) bird.velocity = bird.lift;
 }
 
-// PC
+function restart() {
+    bird.y = 200;
+    bird.velocity = 0;
+    pipes = [];
+    score = 0;
+    gameOver = false;
+}
+
+// PC controls
 document.addEventListener("keydown", e => {
     if (e.code === "Space") jump();
+    if (e.key.toLowerCase() === "r") restart();
 });
 
-// Mobile
-document.addEventListener("touchstart", jump);
+// MOBILE controls
+let lastTap = 0;
+document.addEventListener("touchstart", () => {
+    let now = Date.now();
+    if (now - lastTap < 300) {
+        restart(); // double tap
+    } else {
+        jump();
+    }
+    lastTap = now;
+});
+
+// also click support
 document.addEventListener("click", jump);
 
-// Create pipe
+// CREATE PIPE
 function createPipe() {
     let top = Math.random() * (canvas.height / 2);
+
     pipes.push({
         x: canvas.width,
         top: top,
-        bottom: top + gap
+        bottom: top + gap,
+        passed: false
     });
 }
 
-// Draw bird (GOOD GRAPHICS)
+// DRAW BIRD
 function drawBird() {
     ctx.save();
     ctx.translate(bird.x, bird.y);
     ctx.rotate(bird.velocity * 0.05);
 
-    // body
     ctx.fillStyle = "yellow";
     ctx.beginPath();
-    ctx.arc(0, 0, bird.r, 0, Math.PI * 2);
+    ctx.arc(0,0,bird.r,0,Math.PI*2);
     ctx.fill();
 
-    // eye
     ctx.fillStyle = "white";
     ctx.beginPath();
-    ctx.arc(5, -5, 5, 0, Math.PI * 2);
+    ctx.arc(5,-5,5,0,Math.PI*2);
     ctx.fill();
 
     ctx.fillStyle = "black";
     ctx.beginPath();
-    ctx.arc(7, -5, 2, 0, Math.PI * 2);
+    ctx.arc(7,-5,2,0,Math.PI*2);
     ctx.fill();
 
-    // beak
     ctx.fillStyle = "orange";
     ctx.beginPath();
-    ctx.moveTo(10, 0);
-    ctx.lineTo(20, 5);
-    ctx.lineTo(10, 8);
+    ctx.moveTo(10,0);
+    ctx.lineTo(20,5);
+    ctx.lineTo(10,8);
     ctx.fill();
 
     ctx.restore();
 }
 
-// Draw pipes (NOT WALLS 😄)
+// DRAW PIPE
 function drawPipe(p) {
-    // gradient pipe
-    let grad = ctx.createLinearGradient(p.x, 0, p.x + pipeWidth, 0);
-    grad.addColorStop(0, "#2ecc71");
-    grad.addColorStop(1, "#27ae60");
+    let grad = ctx.createLinearGradient(p.x,0,p.x+pipeWidth,0);
+    grad.addColorStop(0,"#2ecc71");
+    grad.addColorStop(1,"#27ae60");
 
     ctx.fillStyle = grad;
+    ctx.fillRect(p.x,0,pipeWidth,p.top);
+    ctx.fillRect(p.x,p.bottom,pipeWidth,canvas.height);
 
-    // top pipe
-    ctx.fillRect(p.x, 0, pipeWidth, p.top);
-
-    // bottom pipe
-    ctx.fillRect(p.x, p.bottom, pipeWidth, canvas.height);
-
-    // pipe cap
-    ctx.fillStyle = "#1e8449";
-    ctx.fillRect(p.x - 5, p.top - 20, pipeWidth + 10, 20);
-    ctx.fillRect(p.x - 5, p.bottom, pipeWidth + 10, 20);
+    ctx.fillStyle="#1e8449";
+    ctx.fillRect(p.x-5,p.top-20,pipeWidth+10,20);
+    ctx.fillRect(p.x-5,p.bottom,pipeWidth+10,20);
 }
 
-// Game loop
-function update() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+// DRAW TEXT
+function drawUI() {
+    ctx.fillStyle = "white";
+    ctx.font = "bold 30px Arial";
+    ctx.fillText("Score: " + score, 20, 40);
 
-    // sky gradient
+    ctx.font = "20px Arial";
+
+    if (!gameOver) {
+        if (window.innerWidth > 600) {
+            ctx.fillText("Space = Jump | R = Restart", 20, 70);
+        } else {
+            ctx.fillText("Tap = Jump | Double Tap = Restart", 20, 70);
+        }
+    }
+
+    if (gameOver) {
+        ctx.font = "bold 50px Arial";
+        ctx.fillText("GAME OVER", canvas.width/2 - 150, canvas.height/2);
+
+        ctx.font = "25px Arial";
+        if (window.innerWidth > 600) {
+            ctx.fillText("Press R to Restart", canvas.width/2 - 110, canvas.height/2 + 50);
+        } else {
+            ctx.fillText("Double Tap to Restart", canvas.width/2 - 120, canvas.height/2 + 50);
+        }
+    }
+}
+
+// GAME LOOP
+function update() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // sky
     let sky = ctx.createLinearGradient(0,0,0,canvas.height);
     sky.addColorStop(0,"#70c5ce");
     sky.addColorStop(1,"#c0f0ff");
     ctx.fillStyle = sky;
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // physics
-    bird.velocity += bird.gravity;
-    bird.y += bird.velocity;
+    if (!gameOver) {
+        bird.velocity += bird.gravity;
+        bird.y += bird.velocity;
+    }
 
     drawBird();
 
     // pipes
-    for (let i = 0; i < pipes.length; i++) {
+    for (let i=0;i<pipes.length;i++) {
         let p = pipes[i];
-        p.x -= 3;
+
+        if (!gameOver) p.x -= 3;
 
         drawPipe(p);
+
+        // score
+        if (!p.passed && p.x + pipeWidth < bird.x) {
+            score++;
+            p.passed = true;
+        }
 
         // collision
         if (
@@ -155,26 +202,25 @@ function update() {
             bird.x - bird.r < p.x + pipeWidth &&
             (bird.y - bird.r < p.top || bird.y + bird.r > p.bottom)
         ) {
-            location.reload();
+            gameOver = true;
         }
     }
 
-    // remove old
     pipes = pipes.filter(p => p.x > -pipeWidth);
 
-    // create new
-    if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 250) {
+    if (!gameOver && (pipes.length === 0 || pipes[pipes.length-1].x < canvas.width - 250)) {
         createPipe();
     }
 
     // ground
-    ctx.fillStyle = "#d35400";
-    ctx.fillRect(0, canvas.height - 60, canvas.width, 60);
+    ctx.fillStyle="#d35400";
+    ctx.fillRect(0,canvas.height-60,canvas.width,60);
 
-    // collision ground
-    if (bird.y + bird.r > canvas.height - 60 || bird.y < 0) {
-        location.reload();
+    if (bird.y + bird.r > canvas.height-60 || bird.y < 0) {
+        gameOver = true;
     }
+
+    drawUI();
 
     requestAnimationFrame(update);
 }

@@ -2,14 +2,36 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Flappy Ultimate</title>
+<title>Flappy UI</title>
 
 <style>
-body { margin:0; overflow:hidden; background:#70c5ce; }
+body { margin:0; overflow:hidden; }
 canvas { display:block; }
+
+#ui {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+}
+
+button {
+    font-size: 18px;
+    padding: 8px 12px;
+    margin-left: 5px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(0,0,0,0.5);
+    color: white;
+}
 </style>
 </head>
 <body>
+
+<div id="ui">
+    <button onclick="togglePause()">⏸</button>
+    <button onclick="restart()">🔁</button>
+</div>
 
 <canvas id="game"></canvas>
 
@@ -24,8 +46,9 @@ function resize() {
 resize();
 window.addEventListener("resize", resize);
 
-// GAME STATE
+// STATE
 let gameOver = false;
+let paused = false;
 let score = 0;
 
 // BIRD
@@ -45,7 +68,9 @@ let pipeWidth = 70;
 
 // CONTROLS
 function jump() {
-    if (!gameOver) bird.velocity = bird.lift;
+    if (!gameOver && !paused) {
+        bird.velocity = bird.lift;
+    }
 }
 
 function restart() {
@@ -54,33 +79,25 @@ function restart() {
     pipes = [];
     score = 0;
     gameOver = false;
+    paused = false;
 }
 
-// PC controls
+function togglePause() {
+    if (!gameOver) paused = !paused;
+}
+
+// PC
 document.addEventListener("keydown", e => {
     if (e.code === "Space") jump();
-    if (e.key.toLowerCase() === "r") restart();
 });
 
-// MOBILE controls
-let lastTap = 0;
-document.addEventListener("touchstart", () => {
-    let now = Date.now();
-    if (now - lastTap < 300) {
-        restart(); // double tap
-    } else {
-        jump();
-    }
-    lastTap = now;
-});
-
-// also click support
+// Mobile tap
+document.addEventListener("touchstart", jump);
 document.addEventListener("click", jump);
 
 // CREATE PIPE
 function createPipe() {
     let top = Math.random() * (canvas.height / 2);
-
     pipes.push({
         x: canvas.width,
         top: top,
@@ -135,32 +152,23 @@ function drawPipe(p) {
     ctx.fillRect(p.x-5,p.bottom,pipeWidth+10,20);
 }
 
-// DRAW TEXT
+// DRAW UI TEXT
 function drawUI() {
     ctx.fillStyle = "white";
     ctx.font = "bold 30px Arial";
     ctx.fillText("Score: " + score, 20, 40);
-
-    ctx.font = "20px Arial";
-
-    if (!gameOver) {
-        if (window.innerWidth > 600) {
-            ctx.fillText("Space = Jump | R = Restart", 20, 70);
-        } else {
-            ctx.fillText("Tap = Jump | Double Tap = Restart", 20, 70);
-        }
-    }
 
     if (gameOver) {
         ctx.font = "bold 50px Arial";
         ctx.fillText("GAME OVER", canvas.width/2 - 150, canvas.height/2);
 
         ctx.font = "25px Arial";
-        if (window.innerWidth > 600) {
-            ctx.fillText("Press R to Restart", canvas.width/2 - 110, canvas.height/2 + 50);
-        } else {
-            ctx.fillText("Double Tap to Restart", canvas.width/2 - 120, canvas.height/2 + 50);
-        }
+        ctx.fillText("Use Restart Button ↗", canvas.width/2 - 120, canvas.height/2 + 50);
+    }
+
+    if (paused) {
+        ctx.font = "bold 50px Arial";
+        ctx.fillText("PAUSED", canvas.width/2 - 100, canvas.height/2);
     }
 }
 
@@ -175,28 +183,25 @@ function update() {
     ctx.fillStyle = sky;
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    if (!gameOver) {
+    if (!gameOver && !paused) {
         bird.velocity += bird.gravity;
         bird.y += bird.velocity;
     }
 
     drawBird();
 
-    // pipes
     for (let i=0;i<pipes.length;i++) {
         let p = pipes[i];
 
-        if (!gameOver) p.x -= 3;
+        if (!paused && !gameOver) p.x -= 3;
 
         drawPipe(p);
 
-        // score
         if (!p.passed && p.x + pipeWidth < bird.x) {
             score++;
             p.passed = true;
         }
 
-        // collision
         if (
             bird.x + bird.r > p.x &&
             bird.x - bird.r < p.x + pipeWidth &&
@@ -208,11 +213,10 @@ function update() {
 
     pipes = pipes.filter(p => p.x > -pipeWidth);
 
-    if (!gameOver && (pipes.length === 0 || pipes[pipes.length-1].x < canvas.width - 250)) {
+    if (!paused && !gameOver && (pipes.length === 0 || pipes[pipes.length-1].x < canvas.width - 250)) {
         createPipe();
     }
 
-    // ground
     ctx.fillStyle="#d35400";
     ctx.fillRect(0,canvas.height-60,canvas.width,60);
 
